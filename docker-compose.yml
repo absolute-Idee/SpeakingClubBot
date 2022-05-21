@@ -1,0 +1,31 @@
+version: '3'
+
+services:
+  db:
+    image: postgres
+    volumes:
+      - ./data/db:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_NAME=${POSTGRES_NAME}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    container_name: bot_db
+    ports:
+      - "5432:5432"
+    expose:
+      - 5432
+
+  bot:
+    build: .
+    environment:
+      - TG_KEY=${TG_KEY}
+    depends_on:
+      - db
+    command: python bot.py
+    ports:
+      - "8000:8000"
+    expose:
+      - 8000
+    container_name: SpeakingClubBot
+    volumes:
+      - .:/code
