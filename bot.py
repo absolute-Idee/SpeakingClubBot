@@ -5,11 +5,15 @@ from telebot import types
 from langdetect import detect
 from database import MyDatabase
 import os 
+import time
+from loguru import logger
+
 
 bot = telebot.TeleBot(os.environ.get('TG_KEY'))
 
 db = MyDatabase()
 
+logger.add("./logs/debug.log", format="{time} {level} {name} {module} {message}", rotation="5 KB", compression="zip")
 #FROM_CHAT_ID = -1001594933761
 
 languages = ['English', 'Russian', 'Spanish', 'German', 'French', 'Italian']
@@ -128,5 +132,16 @@ def replace_language_notation(language):
     return result
 
 
-bot.polling(none_stop=True, interval=0)
-db.close()
+@logger.catch
+def start():
+    while True:
+        try:
+            bot.polling(none_stop=True)
+            db.close()
+        except Exception as e:
+            time.sleep(3)
+            print(e)
+
+
+if __name__ == '__main__':
+    start()
