@@ -11,7 +11,7 @@ from loguru import logger
 
 bot = telebot.TeleBot(os.environ.get('TG_KEY'))
 
-db = MyDatabase()
+# db = MyDatabase()
 
 logger.add("./logs/debug.log", format="{time} {level} {name} {module} {message}", rotation="5 KB", compression="zip")
 #FROM_CHAT_ID = -1001594933761
@@ -19,9 +19,12 @@ logger.add("./logs/debug.log", format="{time} {level} {name} {module} {message}"
 languages = ['English', 'Russian', 'Spanish', 'German', 'French', 'Italian']
 new_languages = ['newEnglish', 'newRussian', 'newSpanish', 'newGerman', 'newFrench', 'newItalian']
 
+@logger.catch
 @bot.message_handler(commands=['start'])
 def start(message, res=False):
+    db = MyDatabase()
     subs_status = db.check_subscriber(chat_id=message.chat.id)
+    db.close()
     first_message = str("This bot exist for getting news only from one speaking club."
                             +"\n\n Use 'change_language' from menu to get news from another club"
                             +"\n\n Use 'unsubscribe' from menu to stop getting news"
@@ -43,6 +46,7 @@ def start(message, res=False):
 
 @bot.callback_query_handler(func=lambda call: True)
 def callback(call):
+    db = MyDatabase()
     chat_id = call.message.chat.id
     if call.data in languages:
         lang = call.data
@@ -61,11 +65,16 @@ def callback(call):
         db.update_language(chat_id=chat_id, language=lang)
         
         bot.send_message(chat_id, f'Now you will receive {lang} speaking club meetings')
+    
+    db.close()
 
 
+@logger.catch
 @bot.message_handler(commands=['change_language'])
 def change_language(message, res=False):
+    db = MyDatabase()
     a = int(db.check_user(message.chat.id)[0]) # method returns tuple
+    db.close()
     if a == 0:
         bot.send_message(message.chat.id, 'Please restart bot and choose language')
     else:
@@ -81,21 +90,28 @@ def change_language(message, res=False):
         bot.send_message(message.chat.id, "Choose new language", reply_markup=markup)
 
 
+@logger.catch
 @bot.message_handler(commands=['unsubscribe'])
 def unsubscribe(message, res=False):
+    db = MyDatabase()
     a = int(db.check_user(message.chat.id)[0]) # method returns tuple
     if a == 0:
         bot.send_message(message.chat.id, 'Please restart bot and choose language')
     else:
         db.update_subscription(chat_id=message.chat.id, subscription=False)
         bot.send_message(message.chat.id, "You have unsubscribed from all news")
+    
+    db.close()
 
 
+@logger.catch
 @bot.message_handler(commands=['subscribe'])
 def subscribe(message, res=False):
     try:
+        db = MyDatabase()
         db.update_subscription(chat_id=message.chat.id, subscription=True)
         language = db.get_language(chat_id=message.chat.id)[0] #returns tuple object
+        db.close()
 
         bot.send_message(message.chat.id, f"You have subscribed on {language} speaking club news")
     except:
@@ -103,9 +119,13 @@ def subscribe(message, res=False):
 
 
 #пересылка постов с канала
+@logger.catch
 @bot.channel_post_handler(content_types=['text', 'photo', 'video'])
 def new_post(message):
+    db = MyDatabase()
     subscribers = db.get_subscriptions() #list of tuples with table line in tuple
+    db.close()
+
     for i in range(len(subscribers)):
         to_chat_id = subscribers[i][0]
         user_language = replace_language_notation(subscribers[i][2])
@@ -137,7 +157,6 @@ def start():
     while True:
         try:
             bot.polling(none_stop=True)
-            db.close()
         except Exception as e:
             time.sleep(3)
             print(e)
