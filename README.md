@@ -1,6 +1,7 @@
 # ITMOSpeakingClubBot
 
-Speaking Club bot
+Speaking Club bot for filtering messages from channel depending on chosen language.
+https://t.me/ITMOSpeakingClubBot
 
 ## requirement.txt
 file with all dependencies 
